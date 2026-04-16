@@ -1,5 +1,5 @@
 # Learnify - AI-Powered Multimodal Learning
-*A multimodal LLM-powered tool that converts PDFs into presentation slides and narrated videos.*
+*An AI learning assistant that transforms PDFs, YouTube videos, and text into easy-to-understand slides and narrated videos — reducing cognitive load for every learner.*
 
 ---
 
@@ -7,93 +7,98 @@
 
 EN:
 In recent years, the cost of multimodal generation has steadily decreased, and as it continues to decline, generating text, audio, and video is becoming increasingly practical and accessible. This trend suggests new opportunities for automating content production workflows.
-Learnify explores this direction by prototyping a system that transforms a static PDF into narrated slides and a rendered video — positioning the project as an experiment toward future multimodal content automation.
+Learnify explores this direction by turning complex documents — PDFs, research papers, or even YouTube lectures — into narrated slides and rendered videos, so learners can absorb difficult material with minimal cognitive load.
 
 JP（補足）：
-近年、マルチモーダル生成のコストは着実に低下しており、今後さらに下がることで、テキストだけでなく音声や動画生成もより現実的な選択肢になっていくと考えられます。
-こうした変化は、コンテンツ生成パイプラインの自動化に新たな可能性をもたらしつつあります。
-Learnifyは、PDFをスライドとナレーション付き動画へ変換するシステムを試作することで、将来的なマルチモーダル生成の活用可能性を探る実験的プロジェクトです。
+マルチモーダル生成のコストが下がり、資料をナレーション付き動画へ変換することが現実的な選択肢になりました。Learnifyは、PDF・YouTube・テキストといった多様な入力を、一人一人の学びに合わせた動画教材へ変換することで、難しい資料に向き合うときの認知負荷を軽減することを目指すプロトタイプです。
 
 ---
 
-##  Demo  
+##  Demo
 
 - [Learnify](https://slide-pilot-474305.web.app/)
+
 ---
 
 ##  Key Features
 
--  PDF text extraction & structure parsing  
--  LLM-based summarization and slide content generation  
--  LangGraph-based workflow orchestration  
--  Automatic narration using text-to-speech  
--  Video generation combining slides + narration  
--  Modular architecture for experimenting with different LLM providers  
--  Browser UI for previewing and exporting output  
+- **Multi-source input** — PDF, YouTube URL, or free-form text (auto-detected)
+- **3 learning modes** — Quick (gist) / Deep (thorough explanation) / Share (presentation-ready)
+- **Quality evaluation loop** — Slide output is scored on 5 criteria; auto-retries up to 3x if score < 8.0
+- **Async video rendering** — Offloaded to Cloud Run Jobs so the UX stays responsive
+- **Slidev-based slide generation** — `apple-basic` theme with `v-clicks` progressive disclosure
+- **Narration + video composition** — TTS narration is mixed with slide images via moviepy
+- **Real-time progress** — Server-Sent Events stream each workflow node to the UI
+- **Google OAuth + Supabase JWT** — End-to-end authenticated flow with row-level security
 
 ---
 
 ##  Architecture
 
-### **Frontend**
-- Next.js + React  
-- TypeScript  
-- UI preview for slides & generated video  
+### System Architecture
 
-### **Backend**
-- Python + FastAPI  
-- LangGraph for workflow orchestration  
-- LLM API integration (OpenAI, etc.)  
-- Supabase for file handling (optional future direction)
+```mermaid
+flowchart LR
+    U[User Browser] -->|HTTPS| FE[Firebase Hosting / React + Vite]
+    FE -->|Axios + JWT| GW[FastAPI Gateway on Cloud Run]
+    GW -->|/api/agent/*| LG[LangGraph Server - internal]
+    GW -->|Trigger Job| CRJ[Cloud Run Job: slidepilot-video-job]
+    GW --> SB[(Supabase: Auth + Storage + Postgres)]
+    LG --> OAI[OpenAI GPT-4]
+    LG --> TV[Tavily Search]
+    CRJ --> SB
+```
 
-### **Additional Components**
-- Optional parallel processing for TTS & rendering  
-- Video composition layer  
+- **Gateway pattern** — The frontend talks to a single FastAPI endpoint. LangGraph runs as an internal service behind it, which keeps CORS and auth concerns in one place.
+- **Async offload** — Heavy video rendering is pushed to Cloud Run Jobs, so the API stays responsive even when a render takes minutes.
+
+### AI Workflow (LangGraph)
+
+```mermaid
+flowchart TD
+    S([Start]) --> CI[collect_info: PDF / YouTube / Tavily]
+    CI --> KP[generate_key_points]
+    KP --> TOC[generate_toc]
+    TOC --> WS[write_slides_slidev]
+    WS --> EV{evaluate_slides: score >= 8.0?}
+    EV -->|retry max 3| KP
+    EV -->|ok| SR[save_and_render_slidev: HTML + PNG via Playwright]
+    SR --> GN[generate_narration]
+    GN --> RV[render_video: moviepy]
+    RV --> E([End])
+```
+
+The evaluation loop is implemented in [backend/app/agents/slide_workflow.py](backend/app/agents/slide_workflow.py). Scoring criteria switch dynamically based on the input type (educational PDF vs. technical AI news), so the quality bar fits the content.
 
 ---
 
 ##  Tech Stack
 
-| Category | Technologies |
-|---------|-------------|
-| Frontend | Next.js / React / TypeScript |
-| Backend | Python / FastAPI / LangGraph |
-| AI / LLM | OpenAI API (multimodal) |
-| Processing | FFmpeg (planned), async workflows |
-| Tools | Docker / Supabase (optional) |
+| Category  | Technologies |
+|-----------|--------------|
+| Frontend  | React 18 / TypeScript / Vite / React Router v7 / TanStack Query / Recoil |
+| Backend   | Python 3.11 / FastAPI / LangGraph 0.5 / LangSmith |
+| AI / LLM  | OpenAI GPT-4 / Tavily (web search) |
+| Slides    | Slidev (apple-basic theme) / Playwright (HTML → PNG) |
+| Video     | moviepy (composition) / TTS |
+| Data      | Supabase (Postgres + Storage + Auth) |
+| Infra     | Firebase Hosting / Cloud Run / Cloud Run Jobs / GCP Secret Manager |
+| CI/CD     | GitHub Actions (frontend / backend / video-job) / Workload Identity Federation |
 
 ---
 
-##  My Role & Contributions
+##  Quick Start
 
-- Designed full system architecture  
-- Implemented backend workflow using FastAPI + LangGraph  
-- Integrated LLM API for summarization and content generation  
-- Developed UI for preview and interaction  
-- Experimented with parallel processing for faster rendering  
-- Created automation scripts and prototypes using Python  
+> Prerequisites: Python 3.11+, Node 20+, `@slidev/cli`, `playwright-chromium`.
+> Minimum env vars — Backend: `OPENAI_API_KEY`, `TAVILY_API_KEY`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`. Frontend: `VITE_GOOGLE_CLIENT_ID`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`.
 
----
-
-##  What I Learned
-
-- Practical approaches to LLM API integration (not model training)  
-- Workflow orchestration using LangGraph  
-- Multimodal UI/UX challenges (text → slides → video)  
-- Improved backend structure, naming, and async patterns  
-- Balancing prototype velocity vs. maintainable architecture  
-
----
-
-##  Usage / Quick Start
-
-> Note: Environment variables are required for LLM API access (setup instructions in progress).
+Start the three services **in this order**: LangGraph (2024) → FastAPI (8001) → Frontend (5173).
 
 ```sh
 git clone https://github.com/miyata09x0084/slide-pilot
 cd slide-pilot
 
-# 1. LangGraph (AI Engine) - Run in the repository root
+# 1. LangGraph (AI Engine) — from the repository root
 python3.11 -m langgraph_cli dev --host 0.0.0.0 --port 2024
 
 # 2. FastAPI (Gateway)
@@ -102,3 +107,44 @@ cd backend/app && python3 main.py
 # 3. Frontend
 cd frontend && npm install && npm run dev
 ```
+
+---
+
+##  Project Structure
+
+```
+slide-pilot/
+├── backend/
+│   ├── app/
+│   │   ├── agents/      # LangGraph workflows (slide_workflow, react_agent)
+│   │   ├── routers/     # FastAPI endpoints (uploads, slides, agent proxy, render)
+│   │   ├── prompts/     # Externalized prompts (slide / evaluation / narration)
+│   │   └── core/        # Supabase / Cloud Run / Storage
+│   └── jobs/            # Cloud Run Job (video rendering)
+└── frontend/
+    └── src/features/    # dashboard / generation / slide / auth
+```
+
+---
+
+##  My Role & Contributions
+
+- Architected the full monorepo: Frontend + FastAPI gateway + LangGraph + Cloud Run Jobs
+- Designed a 7-node LangGraph pipeline with an evaluation loop that auto-retries when slide quality drops below 8.0/10
+- Offloaded heavy video rendering to Cloud Run Jobs to keep the gateway non-blocking under load
+- Built the auth layer: Google OAuth on the frontend, Supabase JWT verification middleware on the backend
+- Implemented real-time progress streaming via SSE across the 7-step generation flow
+- Externalized every prompt to `backend/app/prompts/` for version-controllable iteration
+- Set up 3 GitHub Actions pipelines with keyless GCP deploys via Workload Identity Federation
+
+---
+
+##  What I Learned
+
+- Practical approaches to LLM API integration (not model training)
+- Designing stateful AI workflows with retry/evaluation loops in LangGraph
+- Multimodal UI/UX challenges (text → slides → narrated video)
+- Trade-offs between synchronous API responses and async job queues for heavy compute
+- Schema-driven secret management (`.env.schema.yml`) for CI/CD safety
+- Improved backend structure, naming, and async patterns
+- Balancing prototype velocity vs. maintainable architecture
