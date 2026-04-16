@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-ラクヨミ アシスタントAI (Rakuyomi Assistant AI) is a multimodal learning assistant that helps users digest difficult content with reduced cognitive load. It transforms complex documents (PDFs, papers, technical materials) into easy-to-understand formats. It uses:
+Learnify is a multimodal learning assistant that helps users digest difficult content with reduced cognitive load. It transforms complex documents (PDFs, papers, technical materials) into easy-to-understand formats. It uses:
 - **LangGraph** for orchestrating a multi-step AI agent workflow with quality evaluation
 - **OpenAI GPT-4** for content generation and simplification
 - **Tavily** for real-time information gathering (when generating AI news summaries)

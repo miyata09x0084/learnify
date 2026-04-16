@@ -289,7 +289,7 @@ export default function DashboardPage() {
       <div style={styles.header}>
         <div style={styles.logoSection}>
           <h1 style={styles.logo}>
-            Multimodal Lab
+            Learnify
           </h1>
         </div>
 

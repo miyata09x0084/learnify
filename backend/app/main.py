@@ -9,6 +9,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.types import ASGIApp, Receive, Scope, Send
 
 # 設定とルーターのインポート
 from app.config import settings
@@ -41,6 +42,34 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# レスポンスタイム計測ミドルウェア（Pure ASGI: SSEストリーミングを妨げない）
+class TimingMiddleware:
+    def __init__(self, app: ASGIApp):
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send):
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        start = time.perf_counter()
+
+        async def send_wrapper(message):
+            if message["type"] == "http.response.start":
+                elapsed_ms = round((time.perf_counter() - start) * 1000)
+                headers = list(message.get("headers", []))
+                headers.append((b"x-response-time", f"{elapsed_ms}ms".encode()))
+                message = {**message, "headers": headers}
+                path = scope.get("path", "")
+                method = scope.get("method", "")
+                if elapsed_ms > 200:
+                    print(f"[SLOW] {method} {path} {elapsed_ms}ms")
+            await send(message)
+
+        await self.app(scope, receive, send_wrapper)
+
+app.add_middleware(TimingMiddleware)
+
 # CORS設定（フロントエンドからのアクセスを許可）
 app.add_middleware(
     CORSMiddleware,
@@ -64,7 +93,7 @@ app.include_router(render.router, prefix="/api", tags=["render"])
 async def root():
     """ルートエンドポイント"""
     return {
-        "message": "Multimodal Lab API",
+        "message": "Learnify API",
         "docs": "/docs",
         "health": "/api/health"
     }

@@ -57,13 +57,10 @@ export default function LoginPage() {
         }}
       >
         <h1 style={{ marginBottom: '10px', color: '#333' }}>
-          Multimodal Lab
+          Learnify
         </h1>
-        <p style={{ marginBottom: '8px', color: '#666', fontWeight: '600' }}>
-          Multimodal Content Experiment
-        </p>
-        <p style={{ marginBottom: '30px', color: '#888', fontSize: '14px' }}>
-          難しいPDFを、わかりやすい動画に
+        <p style={{ marginBottom: '30px', color: '#666', fontWeight: '600' }}>
+          AIが作る、あなたの教材
         </p>
 
         {/* Google 公式 OAuth UI（ポップアップ型） */}
