@@ -7,10 +7,10 @@
 
 EN:
 In recent years, the cost of multimodal generation has steadily decreased, and as it continues to decline, generating text, audio, and video is becoming increasingly practical and accessible. This trend suggests new opportunities for automating content production workflows.
-Learnify explores this direction by turning complex documents — PDFs, research papers, or even YouTube lectures — into narrated slides and rendered videos, so learners can absorb difficult material with minimal cognitive load.
+Learnify explores this direction by turning PDFs, research papers, and YouTube lectures into narrated slides and rendered videos tailored to each learner's level and goals — making personalized learning the default, not the exception.
 
 JP（補足）：
-マルチモーダル生成のコストが下がり、資料をナレーション付き動画へ変換することが現実的な選択肢になりました。Learnifyは、PDF・YouTube・テキストといった多様な入力を、一人一人の学びに合わせた動画教材へ変換することで、難しい資料に向き合うときの認知負荷を軽減することを目指すプロトタイプです。
+マルチモーダル生成のコストが下がり、資料をナレーション付き動画へ変換することが現実的な選択肢になりました。Learnifyは、PDF・YouTube・テキストといった多様な入力から、一人一人の理解度や目的に合わせた動画教材を生成することで、学びの個別最適化を目指すプロトタイプです。
 
 ---
 
