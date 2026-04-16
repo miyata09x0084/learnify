@@ -56,9 +56,20 @@ export default function LoginPage() {
           textAlign: 'center',
         }}
       >
-        <h1 style={{ marginBottom: '10px', color: '#333' }}>
+        <h1 style={{ marginBottom: '6px', color: '#333' }}>
           Learnify
         </h1>
+        <p
+          style={{
+            marginBottom: '4px',
+            color: '#555',
+            fontSize: '14px',
+            fontWeight: 500,
+            letterSpacing: '0.02em',
+          }}
+        >
+          AI-Powered Multimodal Learning
+        </p>
         <p style={{ marginBottom: '30px', color: '#666', fontWeight: '600' }}>
           AIが作る、あなたの教材
         </p>

@@ -1,4 +1,4 @@
-#  Learnify
+# Learnify - AI-Powered Multimodal Learning
 *A multimodal LLM-powered tool that converts PDFs into presentation slides and narrated videos.*
 
 ---
