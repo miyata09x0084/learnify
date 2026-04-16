@@ -1,1 +1,1 @@
-"""Multimodal Lab Backend Package"""
+"""Learnify Backend Package"""
