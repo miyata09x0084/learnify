@@ -67,11 +67,12 @@ to the UI via SSE — the user sees progress in real time.
 
 | Layer | Stack |
 |---|---|
-| **AI Workflow** | LangGraph 0.5 / LangSmith / OpenAI GPT-4 / Tavily |
-| **Delivery** | FastAPI / Cloud Run + Cloud Run Jobs / Supabase (Auth + Storage + Postgres) |
-| **Frontend** | React 18 + TypeScript / Vite / TanStack Query |
-| **Output Toolchain** | Slidev (apple-basic) → Playwright → moviepy + TTS |
-| **Ops** | Firebase Hosting / GitHub Actions + Workload Identity Federation |
+| **AI Workflow** | LangGraph / LangSmith / OpenAI / Tavily |
+| **Backend** | FastAPI |
+| **DB** | Supabase (Auth + Storage + Postgres) |
+| **Frontend** | React + TypeScript / Vite / TanStack Query |
+| **Rendering** | Slidev (apple-basic) → Playwright → moviepy + TTS |
+| **Ops** | Firebase Hosting / Cloud Run + Cloud Run Jobs / GitHub Actions + Workload Identity Federation |
 
 ---
 
