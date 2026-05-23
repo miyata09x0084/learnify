@@ -14,6 +14,7 @@ import { useSamples } from "./api/get-samples";
 import { uploadPdf } from "./api/upload-pdf";
 import UnifiedCard from "./components/UnifiedCard";
 import QuickActionMenu from "./components/QuickActionMenu";
+import { env } from "@/config/env";
 
 const styles: Record<string, React.CSSProperties> = {
   container: {
@@ -217,8 +218,14 @@ export default function DashboardPage() {
     navigate("/login", { replace: true });
   };
 
-  // クイックメニューを開く
+  // クイックメニューを開く（生成停止中は案内のみ表示）
   const handleNewSlide = useCallback(() => {
+    if (!env.GENERATION_ENABLED) {
+      alert(
+        "動画生成は現在一時停止しています。\nサンプルや過去に生成した動画は引き続きご覧いただけます。"
+      );
+      return;
+    }
     setShowQuickMenu(true);
   }, []);
 
@@ -351,11 +358,15 @@ export default function DashboardPage() {
 
       {/* ユーザー動画グリッド */}
       <div className="dashboard-grid" style={styles.gridContainerNoTopPadding}>
-        {/* 新規作成 */}
+        {/* 新規作成（生成停止中は「停止中」を表示） */}
         <UnifiedCard
-          icon="📄"
-          title="新規作成"
-          subtitle="PDFから動画を生成"
+          icon={env.GENERATION_ENABLED ? "📄" : "🚧"}
+          title={env.GENERATION_ENABLED ? "新規作成" : "停止中"}
+          subtitle={
+            env.GENERATION_ENABLED
+              ? "PDFから動画を生成"
+              : "動画生成は一時停止しています"
+          }
           onClick={handleNewSlide}
           variant="primary"
           className="card-default"
