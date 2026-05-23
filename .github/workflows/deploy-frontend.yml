@@ -50,6 +50,9 @@ jobs:
           # Supabase Configuration
           VITE_SUPABASE_URL=${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY=${{ secrets.VITE_SUPABASE_ANON_KEY }}
+
+          # 動画生成のON/OFF（未設定なら停止。再開するにはリポジトリ変数 VITE_GENERATION_ENABLED=true を設定）
+          VITE_GENERATION_ENABLED=${{ vars.VITE_GENERATION_ENABLED }}
           EOF
 
           echo "✅ Generated .env.production:"

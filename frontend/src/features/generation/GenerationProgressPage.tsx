@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useReactAgent } from './hooks/useReactAgent';
 import { uploadPdf } from '../dashboard/api/upload-pdf';
+import { env } from '@/config/env';
 
 // 処理ステータス
 type ProcessingStatus = 'uploading' | 'creating_thread' | 'generating' | 'completed' | 'error';
@@ -22,6 +23,8 @@ export default function GenerationProgressPage() {
 
   // PDF自動開始処理（アップロード完了時）
   useEffect(() => {
+    // 生成停止中はクラウドを呼ばない（コスト削減）
+    if (!env.GENERATION_ENABLED) return;
     if (!autoStart || hasStarted.current) return;
     hasStarted.current = true;
 
@@ -77,6 +80,56 @@ export default function GenerationProgressPage() {
       }, 2000);
     }
   }, [slideData, isThinking, isPollingVideo, navigate]);
+
+  // 生成停止中の表示（コスト削減のためLangGraph Cloudを停止中）
+  if (!env.GENERATION_ENABLED) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        background: '#f5f5f5',
+        fontFamily: 'Arial, sans-serif',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '40px 20px'
+      }}>
+        <div style={{
+          maxWidth: '560px',
+          width: '100%',
+          background: 'white',
+          borderRadius: '12px',
+          padding: '40px',
+          boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+          textAlign: 'center'
+        }}>
+          <div style={{ fontSize: '56px', marginBottom: '16px' }}>🚧</div>
+          <h2 style={{ fontSize: '22px', fontWeight: 'bold', color: '#333', marginBottom: '12px' }}>
+            動画生成は一時停止中です
+          </h2>
+          <p style={{ fontSize: '14px', color: '#666', marginBottom: '28px', lineHeight: 1.7 }}>
+            現在、動画生成機能を一時的に停止しています。<br />
+            サンプルや過去に生成した動画は引き続きご覧いただけます。
+          </p>
+          <button
+            onClick={() => navigate('/', { replace: true })}
+            style={{
+              padding: '10px 20px',
+              fontSize: '14px',
+              background: '#3b82f6',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontWeight: 600
+            }}
+          >
+            ← ダッシュボードに戻る
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{
