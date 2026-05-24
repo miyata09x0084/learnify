@@ -1,0 +1,27 @@
+name: Supabase Keep-Alive
+
+# Supabase無料プランは1週間アクセスが無いとプロジェクトを一時停止する。
+# 毎日DBへ軽いクエリを投げて停止を防ぐ（Freeダウングレード後の実質$0運用のため）。
+# 注意: scheduleはデフォルトブランチ(main)に存在しないと発火しない。マージ後に有効化される。
+
+on:
+  schedule:
+    - cron: '0 0 * * *'  # 毎日 00:00 UTC (JST 09:00)
+  workflow_dispatch:
+
+jobs:
+  ping:
+    name: Ping Supabase to prevent free-tier pause
+    runs-on: ubuntu-latest
+    steps:
+      - name: Query Supabase (executes a real DB query to keep it active)
+        env:
+          SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+        run: |
+          curl --fail --silent --show-error \
+            --retry 3 --retry-delay 5 \
+            "${SUPABASE_URL}/rest/v1/slides?select=id&limit=1" \
+            -H "apikey: ${SUPABASE_ANON_KEY}" \
+            -H "Authorization: Bearer ${SUPABASE_ANON_KEY}"
+          echo "Supabase keep-alive query succeeded"
