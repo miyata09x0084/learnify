@@ -7,7 +7,7 @@ Issue #29: Supabase Storage対応
 
 from langchain_core.tools import tool
 from langchain_community.document_loaders import PyPDFLoader
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 from pathlib import Path
 import json
 import tempfile
