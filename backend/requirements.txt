@@ -9,12 +9,14 @@ python-multipart>=0.0.6
 httpx>=0.25.0
 
 # LangChain / LangGraph stack ---
+# 注意: langgraph / langgraph-api / langgraph-cli は LangGraph Platform のランタイムが
+# 供給する（langgraph.json の dependencies: ["langgraph"] で宣言済み）。ここで pin すると
+# langchain-core との版ズレで PregelProtocol の MRO エラーが発生するため固定しない。
+# Cloud Run は FastAPI プロキシのみで langgraph を import しないため影響なし。
+# langchain-openai の <0.3.0 上限は古い langchain-core を強制し競合の原因になるため撤去。
 langchain-core>=0.3.64
-langchain-openai>=0.2.0,<0.3.0
-langgraph>=0.4.0
+langchain-openai>=0.2.0
 langgraph-sdk>=0.2.0
-langgraph-cli>=0.1.0
-langgraph-api>=0.0.1
 langsmith>=0.3.45
 
 # ---Compatibility helpers---
