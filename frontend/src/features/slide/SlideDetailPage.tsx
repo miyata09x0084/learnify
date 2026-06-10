@@ -5,8 +5,6 @@
 
 import { useNavigate, useParams } from 'react-router-dom';
 import { useState, useCallback } from 'react';
-import SlideDetailLayout from './components/SlideDetailLayout';
-import ChatPanel from './components/ChatPanel';
 import { SlideContentViewer } from './components/SlideContentViewer';
 import { useSlideDetail } from './api/get-slide-detail';
 import FeedbackModal from './components/FeedbackModal';
@@ -49,8 +47,18 @@ const styles: Record<string, React.CSSProperties> = {
     color: '#333',
     fontWeight: 'bold',
   },
-  slideViewerWrapper: {
-    height: '100%',
+  content: {
+    maxWidth: '1800px',
+    margin: '0 auto',
+    padding: '24px',
+  },
+  slidePane: {
+    background: 'white',
+    borderRadius: '12px',
+    padding: '24px',
+    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+    overflowY: 'auto',
+    maxHeight: 'calc(100vh - 112px)',
   },
 };
 
@@ -117,19 +125,16 @@ export default function SlideDetailPage() {
 
         </div>
 
-      {/* 2ペインレイアウト */}
-      <SlideDetailLayout
-        slidePane={
-          <div style={styles.slideViewerWrapper}>
-            <SlideContentViewer
-              slideId={slide.id}
-              onQuickFeedback={handleQuickFeedback}
-              onOpenFeedbackModal={() => setShowFeedbackModal(true)}
-            />
-          </div>
-        }
-        chatPane={<ChatPanel slideId={slide.id} />}
-      />
+      {/* スライドビューア（全幅） */}
+      <div style={styles.content}>
+        <div style={styles.slidePane}>
+          <SlideContentViewer
+            slideId={slide.id}
+            onQuickFeedback={handleQuickFeedback}
+            onOpenFeedbackModal={() => setShowFeedbackModal(true)}
+          />
+        </div>
+      </div>
 
       {/* フィードバックモーダル */}
       {showFeedbackModal && (

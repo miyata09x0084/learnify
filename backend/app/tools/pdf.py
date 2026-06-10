@@ -5,7 +5,6 @@ PDFファイルからテキストを抽出して、スライド生成に適し�
 Issue #29: Supabase Storage対応
 """
 
-from langchain_core.tools import tool
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from pathlib import Path
@@ -15,7 +14,6 @@ from typing import Dict, Any
 from app.core.storage import download_from_storage
 
 
-@tool
 def process_pdf(file_path: str) -> str:
     """
     PDFファイルからテキストを抽出して要約可能な形式に変換

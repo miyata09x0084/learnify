@@ -5,9 +5,7 @@
 
 // 通常import用
 export { default as SlideDetailPage } from './SlideDetailPage';
-export { default as ChatPanel } from './components/ChatPanel';
 export { SlideContentViewer } from './components/SlideContentViewer';
-export { default as SlideDetailLayout } from './components/SlideDetailLayout';
 export { default as SuggestedQuestions } from './components/SuggestedQuestions';
 
 // React Router lazy loading用
