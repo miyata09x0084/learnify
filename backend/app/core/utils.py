@@ -21,7 +21,7 @@ import shutil
 import subprocess
 
 from app.core.config import TAVILY_API_KEY
-from app.core.llm import llm, llm_fast
+from app.core.llm import llm
 from app.config import settings
 
 # -------------------
@@ -309,7 +309,7 @@ def _create_llm_summarized_bullets(results: List[Dict], vendor_name: str = "Micr
   ]
 
   try:
-    msg = llm_fast.invoke(prompt)
+    msg = llm.invoke(prompt)
     lines = msg.content.strip().split("\n")
     bullets = [line.strip() for line in lines if line.strip().startswith("-")][:num_bullets]
 
