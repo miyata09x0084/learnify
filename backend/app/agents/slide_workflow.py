@@ -22,7 +22,7 @@ from langchain_core.runnables import RunnableConfig
 # ローカルモジュール
 from app.config import settings
 from app.core.config import TAVILY_API_KEY
-from app.core.llm import llm
+from app.core.llm import llm, llm_fast, llm_eval
 from app.core.supabase import save_slide_to_supabase
 from app.core.storage import upload_to_storage
 from app.core.utils import (
@@ -333,7 +333,7 @@ def generate_key_points(state: State) -> Dict:
       ]
 
       # 並列実行（最大5並列）
-      responses = llm.batch(batch_prompts, config={"max_concurrency": 5})
+      responses = llm_fast.batch(batch_prompts, config={"max_concurrency": 5})
 
       # 結果を統合
       chunk_points = []
@@ -673,7 +673,9 @@ def evaluate_slides_slidev(state: State) -> Dict:
     input_type=input_type
   )
   try:
-    msg = llm.invoke(prompt)
+    # 評価専用ティア（temperature対応モデル）で決定的に採点する。
+    # 品質ティア(GPT-5系)は temperature=1.0 固定のため採点がブレ、稀にJSONが壊れる。
+    msg = llm_eval.invoke(prompt)
     raw = msg.content or ""
     js = _find_json(raw) or raw
     data = json.loads(js)
@@ -730,7 +732,7 @@ def save_and_render_slidev(state: State) -> Dict:
   slug_prompt = get_slug_prompt(title=title)
 
   try:
-    emsg = llm.invoke(slug_prompt)
+    emsg = llm_fast.invoke(slug_prompt)
     file_stem = _slugify_en(emsg.content.strip()) or _slugify_en(title)
   except Exception:
     file_stem = _slugify_en(title) or "ai-latest-info"
@@ -972,7 +974,7 @@ def generate_narration(state: State) -> Dict:
         ]
 
         # 並列LLM実行（最大5並列）
-        responses = llm.batch(batch_prompts, config={"max_concurrency": 5})
+        responses = llm_fast.batch(batch_prompts, config={"max_concurrency": 5})
 
         # 結果を整形
         narrations = []
