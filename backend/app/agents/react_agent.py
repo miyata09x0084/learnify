@@ -9,13 +9,13 @@ Reasoning（思考）とActing（行動）を繰り返して複雑なタスク�
 """
 
 from dotenv import load_dotenv
+from langchain_openai import ChatOpenAI
 from langgraph.prebuilt import create_react_agent
 from langgraph.graph import MessagesState
 from langsmith import traceable
 from typing_extensions import TypedDict
 
 # ツールのインポート
-from app.core.llm import get_llm
 from app.tools.gmail import send_gmail
 from app.tools.slides import generate_slides
 
@@ -27,9 +27,11 @@ import os
 os.environ.setdefault("LANGCHAIN_TRACING_V2", "true")
 os.environ.setdefault("LANGCHAIN_PROJECT", "react-agent")
 
-# LLM設定（品質ティア: ツール選択の信頼性を重視）
-# temperature=0 で決定的な応答（再現性重視）。temperature非対応モデルでは無視される。
-llm = get_llm("quality", temperature=0)
+# LLM設定（GPT-4o）
+llm = ChatOpenAI(
+    model="gpt-4o",
+    temperature=0,  # 決定的な応答（再現性重視）
+)
 
 # ツールリスト
 tools = [send_gmail, generate_slides]
