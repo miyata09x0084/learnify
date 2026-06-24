@@ -14,7 +14,6 @@ import sys
 import json
 import tempfile
 import shutil
-import requests
 from pathlib import Path
 
 # backend/app をモジュールパスに追加
@@ -26,26 +25,7 @@ load_dotenv()
 from app.core.supabase import get_video_job, update_video_job, update_slide_video_url
 from app.core.storage import upload_to_storage
 from app.core.slide_renderer import SlideRenderer
-
-
-def download_audio_file(url: str, dest_path: Path) -> bool:
-    """URLから音声ファイルをダウンロード
-
-    Args:
-        url: 音声ファイルのURL（Supabase Storage公開URL）
-        dest_path: 保存先パス
-
-    Returns:
-        成功: True、失敗: False
-    """
-    try:
-        response = requests.get(url, timeout=120)
-        response.raise_for_status()
-        dest_path.write_bytes(response.content)
-        return True
-    except Exception as e:
-        print(f"[job] Failed to download audio: {e}")
-        return False
+from app.core.video_compose import slugify_title, align_audio_and_images, download_audio_file
 
 
 def main():
@@ -112,11 +92,7 @@ def main():
             raise Exception("SlideRenderer produced no images")
 
         # 6. 音声ファイル数とPNGファイル数を合わせる
-        if len(png_files) != len(audio_files):
-            print(f"[job] WARNING: PNG count ({len(png_files)}) != audio count ({len(audio_files)})")
-            min_count = min(len(png_files), len(audio_files))
-            png_files = png_files[:min_count]
-            audio_files = audio_files[:min_count]
+        png_files, audio_files = align_audio_and_images(png_files, audio_files)
 
         # 7. MoviePyで動画生成
         from moviepy import ImageClip, AudioFileClip, concatenate_videoclips
@@ -141,15 +117,7 @@ def main():
         final_video = concatenate_videoclips(clips, method="compose")
 
         # ファイル名を生成
-        import re
-        def slugify(text: str) -> str:
-            slug = text.lower()
-            slug = re.sub(r'[^a-z0-9\s-]', '', slug)
-            slug = re.sub(r'[\s_]+', '-', slug)
-            slug = re.sub(r'-+', '-', slug).strip('-')
-            return slug or "ai-slide"
-
-        file_stem = slugify(title)
+        file_stem = slugify_title(title)
         video_path = temp_dir / f"{file_stem}_video.mp4"
 
         final_video.write_videofile(

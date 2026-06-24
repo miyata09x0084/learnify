@@ -9,12 +9,12 @@ LangGraphはHTTP呼び出しのみを行う。
 from fastapi import APIRouter, HTTPException, Depends, Header, Request
 from pydantic import BaseModel
 from app.auth.middleware import verify_token, optional_verify_token
+from app.core.video_compose import slugify_title, align_audio_and_images, download_audio_file
 from typing import List, Dict, Any, Optional
 import asyncio
 import tempfile
 import shutil
 from pathlib import Path
-import re
 import os
 
 # 内部API認証用シークレット
@@ -36,15 +36,6 @@ class VideoRenderResponse(BaseModel):
     """動画レンダリングレスポンス"""
     video_url: str
     log: List[str]
-
-
-def _slugify_en(title: str) -> str:
-    """タイトルを英語スラッグに変換"""
-    slug = title.lower()
-    slug = re.sub(r'[^a-z0-9\s-]', '', slug)
-    slug = re.sub(r'[\s_]+', '-', slug)
-    slug = re.sub(r'-+', '-', slug).strip('-')
-    return slug or "ai-slide"
 
 
 def _render_video_blocking(
@@ -77,9 +68,9 @@ def _render_video_blocking(
         slug_prompt = get_slug_prompt(title=title)
         try:
             emsg = llm.invoke(slug_prompt)
-            file_stem = _slugify_en(emsg.content.strip()) or _slugify_en(title)
+            file_stem = slugify_title(emsg.content.strip()) or slugify_title(title)
         except Exception:
-            file_stem = _slugify_en(title) or "ai-slide"
+            file_stem = slugify_title(title) or "ai-slide"
 
         # 2. SlideRenderer で PNG 画像生成（HTML/CSS + Playwright）
         png_dir = temp_dir / "slides_png"
@@ -97,12 +88,7 @@ def _render_video_blocking(
             }
 
         # 3. 音声ファイル数とPNGファイル数を合わせる
-        audio_files_local = list(audio_files)
-        if len(png_files) != len(audio_files_local):
-            print(f"[render] WARNING: PNG count ({len(png_files)}) != audio count ({len(audio_files_local)})")
-            min_count = min(len(png_files), len(audio_files_local))
-            png_files = png_files[:min_count]
-            audio_files_local = audio_files_local[:min_count]
+        png_files, audio_files_local = align_audio_and_images(png_files, list(audio_files))
 
         # 4. MoviePyで画像+音声を合成
         clips = []
@@ -271,28 +257,6 @@ class VideoJobStatusResponse(BaseModel):
     error_message: Optional[str] = None
 
 
-def _download_audio_file(url: str, dest_path: Path) -> bool:
-    """URLから音声ファイルをダウンロード
-
-    Args:
-        url: 音声ファイルのURL（Supabase Storage公開URL）
-        dest_path: 保存先パス
-
-    Returns:
-        成功: True、失敗: False
-    """
-    import requests
-
-    try:
-        response = requests.get(url, timeout=60)
-        response.raise_for_status()
-        dest_path.write_bytes(response.content)
-        return True
-    except Exception as e:
-        print(f"[local-job] Failed to download audio: {e}")
-        return False
-
-
 def _run_video_job_local(job_id: str):
     """
     ローカル環境用：video_render_job.pyと同等の処理をスレッドで実行
@@ -345,7 +309,7 @@ def _run_video_job_local(job_id: str):
                 # URLからダウンロード
                 local_path = audio_dir / f"narration_{i:03d}.mp3"
                 print(f"[local-job] Downloading audio {i}: {audio_url[:80]}...")
-                if not _download_audio_file(audio_url, local_path):
+                if not download_audio_file(audio_url, local_path):
                     raise Exception(f"Failed to download audio file {i}")
                 audio_files.append(str(local_path))
             else:
@@ -364,11 +328,7 @@ def _run_video_job_local(job_id: str):
             raise Exception("SlideRenderer produced no images")
 
         # 5. 音声ファイル数とPNGファイル数を合わせる
-        if len(png_files) != len(audio_files):
-            print(f"[local-job] WARNING: PNG count ({len(png_files)}) != audio count ({len(audio_files)})")
-            min_count = min(len(png_files), len(audio_files))
-            png_files = png_files[:min_count]
-            audio_files = audio_files[:min_count]
+        png_files, audio_files = align_audio_and_images(png_files, audio_files)
 
         # 6. MoviePyで動画生成
         from moviepy import ImageClip, AudioFileClip, concatenate_videoclips
@@ -392,7 +352,7 @@ def _run_video_job_local(job_id: str):
         print(f"[local-job] Concatenating {len(clips)} video clips")
         final_video = concatenate_videoclips(clips, method="compose")
 
-        file_stem = _slugify_en(title)
+        file_stem = slugify_title(title)
         video_path = temp_dir / f"{file_stem}_video.mp4"
 
         final_video.write_videofile(
