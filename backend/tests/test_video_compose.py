@@ -10,6 +10,7 @@ from app.core.video_compose import (
     slugify_title,
     align_audio_and_images,
     download_audio_file,
+    compose_video,
 )
 
 
@@ -76,3 +77,39 @@ def test_download_audio_file_failure_returns_false(tmp_path):
         ok = download_audio_file("http://example/a.mp3", dest)
     assert ok is False
     assert not dest.exists()
+
+
+# --- compose_video（moviepy は mock） ---
+
+def test_compose_video_no_inputs_returns_none(tmp_path):
+    # 入力が空 -> クリップ0 -> None（呼び出し側が空時の挙動を決める契約）
+    assert compose_video([], [], tmp_path / "out.mp4", log_prefix="t") is None
+
+
+def test_compose_video_all_clips_fail_returns_none(tmp_path):
+    with patch("moviepy.ImageClip", side_effect=Exception("bad image")):
+        result = compose_video([Path("a.png")], ["a.mp3"], tmp_path / "out.mp4", log_prefix="t")
+    assert result is None
+
+
+def test_compose_video_success_returns_metadata(tmp_path):
+    png = [Path("a.png"), Path("b.png")]
+    audio = ["a.mp3", "b.mp3"]
+
+    fake_video_clip = MagicMock()
+    fake_img = MagicMock()
+    fake_img.with_duration.return_value.with_audio.return_value = fake_video_clip
+    fake_audio = MagicMock()
+    fake_audio.duration = 3.0
+    fake_final = MagicMock()
+    fake_final.duration = 6.0
+
+    out = tmp_path / "out.mp4"
+    with patch("moviepy.ImageClip", return_value=fake_img), \
+         patch("moviepy.AudioFileClip", return_value=fake_audio), \
+         patch("moviepy.concatenate_videoclips", return_value=fake_final) as mock_concat:
+        result = compose_video(png, audio, out, log_prefix="t")
+
+    assert result == {"num_clips": 2, "duration": 6.0}
+    mock_concat.assert_called_once()
+    fake_final.write_videofile.assert_called_once()

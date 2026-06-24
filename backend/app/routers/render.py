@@ -9,7 +9,7 @@ LangGraphはHTTP呼び出しのみを行う。
 from fastapi import APIRouter, HTTPException, Depends, Header, Request
 from pydantic import BaseModel
 from app.auth.middleware import verify_token, optional_verify_token
-from app.core.video_compose import slugify_title, align_audio_and_images, download_audio_file
+from app.core.video_compose import slugify_title, align_audio_and_images, download_audio_file, compose_video
 from typing import List, Dict, Any, Optional
 import asyncio
 import tempfile
@@ -53,7 +53,6 @@ def _render_video_blocking(
     """
     print(f"[render] Starting video rendering: {len(slides_json)} slides, {len(audio_files)} audio files")
 
-    from moviepy import ImageClip, AudioFileClip, concatenate_videoclips
     from app.core.slide_renderer import SlideRenderer
     from app.core.storage import upload_to_storage
     from app.core.supabase import update_slide_video_url
@@ -90,37 +89,14 @@ def _render_video_blocking(
         # 3. 音声ファイル数とPNGファイル数を合わせる
         png_files, audio_files_local = align_audio_and_images(png_files, list(audio_files))
 
-        # 4. MoviePyで画像+音声を合成
-        clips = []
-        for i, (png_path, audio_path) in enumerate(zip(png_files, audio_files_local)):
-            try:
-                img_clip = ImageClip(str(png_path))
-                audio_clip = AudioFileClip(audio_path)
-                video_clip = img_clip.with_duration(audio_clip.duration).with_audio(audio_clip)
-                clips.append(video_clip)
-            except Exception as e:
-                print(f"[render] WARNING: Failed to process slide {i}: {str(e)[:100]}")
-                continue
-
-        if not clips:
+        # 4-5. MoviePyで合成して書き出し
+        video_path = temp_dir / f"{file_stem}_video.mp4"
+        composition = compose_video(png_files, audio_files_local, video_path, log_prefix="render")
+        if composition is None:
             return {
                 "video_url": "",
                 "log": log_entries + ["[video] ERROR: all clips failed"]
             }
-
-        # 5. 全スライドを結合
-        print(f"[render] Concatenating {len(clips)} video clips")
-        final_video = concatenate_videoclips(clips, method="compose")
-        video_path = temp_dir / f"{file_stem}_video.mp4"
-
-        final_video.write_videofile(
-            str(video_path),
-            fps=2,
-            codec="libx264",
-            audio_codec="aac",
-            bitrate="2000k",
-            preset="ultrafast"
-        )
         print(f"[render] Video written to {video_path}")
 
         # 6. Supabase Storageにアップロード
@@ -134,7 +110,7 @@ def _render_video_blocking(
                 content_type="video/mp4"
             )
             video_size_mb = video_path.stat().st_size / 1024 / 1024
-            log_msg = f"[video] rendered {len(clips)} slides -> MP4 ({video_size_mb:.1f}MB, {final_video.duration:.1f}sec)"
+            log_msg = f"[video] rendered {composition['num_clips']} slides -> MP4 ({video_size_mb:.1f}MB, {composition['duration']:.1f}sec)"
             log_msg += f" | uploaded to {video_url}"
             log_entries.append(log_msg)
             print(f"[render] Uploaded to {video_url}")
@@ -330,39 +306,11 @@ def _run_video_job_local(job_id: str):
         # 5. 音声ファイル数とPNGファイル数を合わせる
         png_files, audio_files = align_audio_and_images(png_files, audio_files)
 
-        # 6. MoviePyで動画生成
-        from moviepy import ImageClip, AudioFileClip, concatenate_videoclips
-
-        clips = []
-        for i, (png_path, audio_path) in enumerate(zip(png_files, audio_files)):
-            try:
-                img_clip = ImageClip(str(png_path))
-                audio_clip = AudioFileClip(audio_path)
-                video_clip = img_clip.with_duration(audio_clip.duration).with_audio(audio_clip)
-                clips.append(video_clip)
-                print(f"[local-job] Processed clip {i+1}/{len(png_files)}")
-            except Exception as e:
-                print(f"[local-job] WARNING: Failed to process slide {i}: {str(e)[:100]}")
-                continue
-
-        if not clips:
-            raise Exception("All clips failed to process")
-
-        # 7. 動画を結合・エンコード
-        print(f"[local-job] Concatenating {len(clips)} video clips")
-        final_video = concatenate_videoclips(clips, method="compose")
-
+        # 6-7. MoviePyで合成して書き出し
         file_stem = slugify_title(title)
         video_path = temp_dir / f"{file_stem}_video.mp4"
-
-        final_video.write_videofile(
-            str(video_path),
-            fps=2,
-            codec="libx264",
-            audio_codec="aac",
-            bitrate="2000k",
-            preset="ultrafast"
-        )
+        if compose_video(png_files, audio_files, video_path, log_prefix="local-job") is None:
+            raise Exception("All clips failed to process")
         print(f"[local-job] Video written to {video_path}")
 
         # 8. Supabase Storageにアップロード
