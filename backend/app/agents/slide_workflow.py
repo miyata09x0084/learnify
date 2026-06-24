@@ -110,11 +110,6 @@ class State(TypedDict, total=False):
   attempts: int                                 # リトライ回数 (最大3)
 
   # ══════════════════════════════════════════════════════════
-  # 図解生成 (Node D.5) - Issue #25
-  # ══════════════════════════════════════════════════════════
-  diagrams: Dict[str, Any]                      # 生成された図解のメタデータ
-
-  # ══════════════════════════════════════════════════════════
   # 出力 (Node F)
   # ══════════════════════════════════════════════════════════
   slide_path: str                               # ローカルファイルパス
@@ -634,16 +629,6 @@ class: text-center
       "error": f"slides_slidev_error: {e}",
       "log": _log(state, f"[slides_slidev] EXCEPTION {e} - using fallback")
     }
-
-# -------------------
-# Node D.5: Mermaid図解生成（Issue #25）
-# -------------------
-@traceable(run_name="d5_generate_diagrams")
-# generate_diagrams ノードは廃止（LLMがプロンプトから独自の図を生成するため不要）
-# Issue #25: テンプレート図の強制挿入を削除し、LLMによる独自図生成に移行
-def generate_diagrams(state: State) -> Dict:
-    """[DEPRECATED] このノードは使用されていません"""
-    return {"log": _log(state, "[diagrams] deprecated - skipped")}
 
 # -------------------
 # Node E: 評価
@@ -1205,7 +1190,6 @@ graph_builder.add_node("collect_info", collect_info)
 graph_builder.add_node("generate_key_points", generate_key_points)
 graph_builder.add_node("generate_toc", generate_toc)
 graph_builder.add_node("write_slides_slidev", write_slides_slidev)
-graph_builder.add_node("generate_diagrams", generate_diagrams)
 graph_builder.add_node("save_and_render_slidev", save_and_render_slidev)
 graph_builder.add_node("evaluate_slides_slidev", evaluate_slides_slidev)
 graph_builder.add_node("generate_narration", generate_narration)
