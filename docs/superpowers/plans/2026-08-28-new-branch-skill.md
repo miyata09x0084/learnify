@@ -25,7 +25,7 @@ REQUIRED SUB-SKILL: superpowers:writing-skills(frontmatter規約・記述スタ�
 **Files:**
 - Create: `~/.claude/skills/new-branch/SKILL.md`
 
-- [ ] **Step 1: SKILL.md を以下の内容で作成する**
+- [x] **Step 1: SKILL.md を以下の内容で作成する**
 
 「型の推測ルール」セクションのみ TODO(human) とする(Task 2で人間が記入)。
 
@@ -93,7 +93,7 @@ git worktree add .claude/worktrees/<slug> -b <name> origin/<default>
 - Issue番号が存在しない → その旨を伝えて内容を聞き直す
 ````
 
-- [ ] **Step 2: ファイルが正しく配置されたことを確認する**
+- [x] **Step 2: ファイルが正しく配置されたことを確認する**
 
 Run: `head -5 ~/.claude/skills/new-branch/SKILL.md`
 Expected: frontmatterの `---` と `name: new-branch` が表示される
@@ -105,7 +105,7 @@ Expected: frontmatterの `---` と `name: new-branch` が表示される
 **Files:**
 - Modify: `~/.claude/skills/new-branch/SKILL.md`(TODO(human) セクション)
 
-- [ ] **Step 1: 人間に型推測ルールの記入を依頼する**
+- [x] **Step 1: 人間に型推測ルールの記入を依頼する**
 
 Learn by Doing リクエストを出し、ユーザーが TODO(human) を5〜10行のルールで置き換えるのを待つ。
 記入例の形式(内容はユーザーが決める):
@@ -118,7 +118,7 @@ Learn by Doing リクエストを出し、ユーザーが TODO(human) を5〜10�
 - 迷ったらユーザーに型を確認する
 ```
 
-- [ ] **Step 2: TODO(human) が残っていないことを確認する**
+- [x] **Step 2: TODO(human) が残っていないことを確認する**
 
 Run: `grep -c "TODO(human)" ~/.claude/skills/new-branch/SKILL.md; true`
 Expected: `0`
@@ -129,7 +129,7 @@ Expected: `0`
 
 **Files:** なし(検証のみ)
 
-- [ ] **Step 1: サブエージェントにSKILL.mdを読ませ、3入力の解釈をドライランさせる**
+- [x] **Step 1: サブエージェントにSKILL.mdを読ませ、3入力の解釈をドライランさせる**
 
 サブエージェント(general-purpose)に以下を依頼する:
 「`~/.claude/skills/new-branch/SKILL.md` を読み、次の3入力それぞれについて
@@ -142,7 +142,7 @@ Expected:
 - 入力2 → 自由テキストパターン、型=fix、`fix/<login系slug>`
 - 入力3 → 型+説明+worktreeモード、`perf/<startup系slug>`、`git worktree add .claude/worktrees/...`
 
-- [ ] **Step 2: 解釈違いがあればSKILL.mdの指示文を修正し、再度ドライランする**
+- [x] **Step 2: 解釈違いがあればSKILL.mdの指示文を修正し、再度ドライランする**
 
 修正が不要ならスキップ。修正した場合は同じプロンプトで再実行し、3入力すべて期待通りになるまで繰り返す。
 
@@ -152,7 +152,7 @@ Expected:
 
 **Files:** なし(検証のみ。作成物は削除する)
 
-- [ ] **Step 1: gh連携を実実行する(Issue番号パターン)**
+- [x] **Step 1: gh連携を実実行する(Issue番号パターン)**
 
 ```bash
 gh issue view 27 --json title,labels      # Expected: title に「Phase 0: デプロイ前提条件の整備...」
@@ -160,7 +160,7 @@ gh issue view 27 --json title,labels      # Expected: title に「Phase 0: デ�
 
 取得したタイトルからブランチ名を生成できることを確認する(作成はStep 2の自由テキスト分のみ)。
 
-- [ ] **Step 2: SKILL.mdの手順に従い、自由テキスト入力で実際にブランチを作成する**
+- [x] **Step 2: SKILL.mdの手順に従い、自由テキスト入力で実際にブランチを作成する**
 
 slide-pilotで手順1〜6を順に実行する:
 
@@ -173,7 +173,7 @@ git switch -c fix/login-error-test origin/main
 git branch --show-current                 # Expected: fix/login-error-test
 ```
 
-- [ ] **Step 3: クリーンアップする**
+- [x] **Step 3: クリーンアップする**
 
 ```bash
 git switch main
@@ -186,14 +186,14 @@ git branch -D fix/login-error-test        # Expected: Deleted branch fix/login-e
 
 **Files:** なし(検証のみ。作成物は削除する)
 
-- [ ] **Step 1: worktreeモードで実際に作成する**
+- [x] **Step 1: worktreeモードで実際に作成する**
 
 ```bash
 git worktree add .claude/worktrees/perf-startup-test -b perf/startup-test origin/main
 git worktree list                         # Expected: perf-startup-test が一覧に出る
 ```
 
-- [ ] **Step 2: クリーンアップする**
+- [x] **Step 2: クリーンアップする**
 
 ```bash
 git worktree remove .claude/worktrees/perf-startup-test
@@ -208,11 +208,23 @@ git worktree list                         # Expected: perf-startup-test が消�
 **Files:**
 - Modify: `docs/superpowers/plans/2026-08-28-new-branch-skill.md`
 
-- [ ] **Step 1: 完了した全ステップのチェックボックスを `[x]` に更新する**
+- [x] **Step 1: 完了した全ステップのチェックボックスを `[x]` に更新する**
 
-- [ ] **Step 2: コミットする**
+- [x] **Step 2: コミットする**
 
 ```bash
 git add docs/superpowers/plans/2026-08-28-new-branch-skill.md
 git commit -m "docs: new-branchスキル実装計画を完了状態に更新"
 ```
+
+---
+
+## 実行時の計画からの逸脱(2026-09-01 完了)
+
+- **REDベースライン追加**: writing-skillsスキルの要求に従い、Task 1の前にスキルなしエージェントの
+  ベースライン測定を実施。観測された弱点(dirty treeで警告のみで続行、main決め打ち)への
+  明示的な禁止文をSKILL.mdに追加
+- **`--no-track` 採用**: `git switch -c` / `git worktree add` に追加
+  (origin/<default>が上流に誤設定されるのを防ぐ。ベースライン測定からの学び)
+- **frontmatter修正**: descriptionの `#N` がYAMLコメント扱いで切れるバグを引用符で修正
+- **型推測ルール**: ユーザーの指示(「すぐ使いたいので進めて」)によりClaudeが標準内容で記入
