@@ -8,8 +8,9 @@ import { InlineFeedback } from './InlineFeedback';
 
 interface SlideContentViewerProps {
   slideId: string;
-  onQuickFeedback: (rating: number) => Promise<void>;
-  onOpenFeedbackModal: () => void;
+  /** 未指定（未ログイン）のときは評価UIを表示しない */
+  onQuickFeedback?: (rating: number) => Promise<void>;
+  onOpenFeedbackModal?: () => void;
 }
 
 export function SlideContentViewer({ slideId, onQuickFeedback, onOpenFeedbackModal }: SlideContentViewerProps) {
@@ -68,12 +69,14 @@ export function SlideContentViewer({ slideId, onQuickFeedback, onOpenFeedbackMod
             </a>
           </div>
 
-          {/* インラインフィードバック */}
-          <InlineFeedback
-            slideId={slideId}
-            onQuickFeedback={onQuickFeedback}
-            onOpenDetail={onOpenFeedbackModal}
-          />
+          {/* インラインフィードバック（ログイン中のみ。送信APIが認証必須のため） */}
+          {onQuickFeedback && onOpenFeedbackModal && (
+            <InlineFeedback
+              slideId={slideId}
+              onQuickFeedback={onQuickFeedback}
+              onOpenDetail={onOpenFeedbackModal}
+            />
+          )}
         </div>
       ) : (
         /* 動画が存在しない場合のメッセージ */

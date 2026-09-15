@@ -60,3 +60,65 @@ def test_download_slide_user_id_mismatch(monkeypatch, mocker):
 
     assert response.status_code == 403
     assert "他のユーザーのファイルにはアクセスできません" in response.json()["detail"]
+
+
+# ──────────────────────────────────────────────────────────────
+# スライド詳細（サンプル動画は匿名で閲覧可能）
+# ──────────────────────────────────────────────────────────────
+
+SAMPLE_USER_ID = "00000000-0000-0000-0000-000000000000"
+
+
+def _slide_row(user_id: str) -> dict:
+    return {
+        "id": "slide-1",
+        "user_id": user_id,
+        "title": "Test",
+        "slide_md": "# md",
+        "created_at": "2026-09-15T00:00:00Z",
+    }
+
+
+def test_get_sample_markdown_without_jwt(mocker):
+    """サンプル動画の詳細はJWT無しでも取得できる"""
+    mocker.patch(
+        "app.routers.slides.get_slide_by_id",
+        return_value=_slide_row(SAMPLE_USER_ID),
+    )
+    mocker.patch("app.routers.slides.cache.get", return_value=None)
+
+    response = client.get("/api/slides/slide-1/markdown")
+
+    assert response.status_code == 200
+    assert response.json()["markdown"] == "# md"
+
+
+def test_get_private_markdown_without_jwt_returns_401(mocker):
+    """他ユーザーのスライドをJWT無しで取得すると401（ログインへ誘導）"""
+    mocker.patch(
+        "app.routers.slides.get_slide_by_id",
+        return_value=_slide_row("user-456"),
+    )
+    mocker.patch("app.routers.slides.cache.get", return_value=None)
+
+    response = client.get("/api/slides/slide-1/markdown")
+
+    assert response.status_code == 401
+
+
+def test_get_private_markdown_with_other_user_jwt_returns_403(monkeypatch, mocker):
+    """他ユーザーのスライドを別ユーザーのJWTで取得すると403"""
+    test_jwt = generate_test_jwt(user_id="user-789")
+    monkeypatch.setenv("SUPABASE_JWT_SECRET", "test-secret")
+    mocker.patch(
+        "app.routers.slides.get_slide_by_id",
+        return_value=_slide_row("user-456"),
+    )
+    mocker.patch("app.routers.slides.cache.get", return_value=None)
+
+    response = client.get(
+        "/api/slides/slide-1/markdown",
+        headers={"Authorization": f"Bearer {test_jwt}"},
+    )
+
+    assert response.status_code == 403

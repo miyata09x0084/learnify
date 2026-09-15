@@ -11,10 +11,13 @@ import { GoogleLogin } from '@react-oauth/google';
 import type { CredentialResponse } from '@react-oauth/google';
 import { useAuth } from './hooks/useAuth';
 
+const LOGIN_FAILED_MESSAGE = 'ログインに失敗しました。時間をおいて再度お試しください。';
+
 export default function LoginPage() {
   const navigate = useNavigate();
   const { login, loginWithGoogle } = useAuth();
   const [showFallback, setShowFallback] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const handleGoogleSuccess = async (credentialResponse: CredentialResponse) => {
     if (!credentialResponse.credential) {
@@ -22,12 +25,14 @@ export default function LoginPage() {
       return;
     }
 
+    setErrorMessage(null);
     try {
       await loginWithGoogle(credentialResponse.credential);
       await new Promise(resolve => setTimeout(resolve, 100));
       navigate('/', { replace: true });
     } catch (error) {
       console.error('[LoginPage] Login failed:', error);
+      setErrorMessage(LOGIN_FAILED_MESSAGE);
     }
   };
 
@@ -78,6 +83,12 @@ export default function LoginPage() {
         <div style={{ display: 'flex', justifyContent: 'center' }}>
           <GoogleLogin onSuccess={handleGoogleSuccess} onError={handleGoogleError} />
         </div>
+
+        {errorMessage && (
+          <p role="alert" style={{ marginTop: '16px', color: '#b91c1c', fontSize: '13px' }}>
+            {errorMessage}
+          </p>
+        )}
 
         {/* サードパーティCookieブロック時のフォールバック（リダイレクト型） */}
         {showFallback && (

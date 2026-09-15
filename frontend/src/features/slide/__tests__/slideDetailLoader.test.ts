@@ -21,6 +21,14 @@ vi.mock('@/config/env', () => ({
   },
 }));
 
+// 認証セッションをモック（既定はログイン済み）
+const { mockGetCachedAccessToken } = vi.hoisted(() => ({
+  mockGetCachedAccessToken: vi.fn<() => string | null>(() => 'cached-token'),
+}));
+vi.mock('@/lib/auth-session', () => ({
+  getCachedAccessToken: mockGetCachedAccessToken,
+}));
+
 import * as getSlideDetailModule from '../api/get-slide-detail';
 
 describe('slideDetailLoader with prefetch', () => {
@@ -34,6 +42,19 @@ describe('slideDetailLoader with prefetch', () => {
           retry: false, // テスト時はリトライしない
         },
       },
+    });
+  });
+
+  describe('セッション復元前', () => {
+    it('トークン未取得ならプリフェッチしない（コンポーネント側の取得に任せる）', async () => {
+      mockGetCachedAccessToken.mockReturnValueOnce(null);
+      vi.spyOn(getSlideDetailModule, 'getSlideDetail');
+
+      const loader = createSlideDetailLoader(queryClient);
+      const result = await loader({ params: { slideId: 'slide-123' } } as any);
+
+      expect(result).toBeNull();
+      expect(getSlideDetailModule.getSlideDetail).not.toHaveBeenCalled();
     });
   });
 

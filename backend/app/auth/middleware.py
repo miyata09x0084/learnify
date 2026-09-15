@@ -97,5 +97,9 @@ async def optional_verify_token(
 
     try:
         return await verify_token(credentials)
-    except HTTPException:
-        return "anonymous"
+    except HTTPException as e:
+        # 不正・期限切れトークン（401）だけを匿名扱いにする。
+        # 設定ミス（503）まで握り潰すと「ログインが必要」に化けて原因が隠れる
+        if e.status_code == status.HTTP_401_UNAUTHORIZED:
+            return "anonymous"
+        raise

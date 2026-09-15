@@ -46,8 +46,10 @@ api.interceptors.response.use(
     if (error.response) {
       const { status } = error.response;
 
-      // 401 Unauthorized - Redirect to login
-      if (status === 401) {
+      // 401 Unauthorized - トークンを送ったのに拒否された場合のみログインへ
+      // （公開ページでセッション復元前に飛んだ匿名リクエストの401では追い出さない）
+      const sentToken = Boolean(error.config?.headers?.Authorization);
+      if (status === 401 && sentToken) {
         localStorage.removeItem('user');
         window.location.href = '/login';
       }

@@ -2,6 +2,10 @@
  * Router Configuration
  * Defines all application routes using React Router v7
  *
+ * 認証:
+ * - `/`（公開トップ）と `/slides/:slideId`（サンプル動画は匿名閲覧可）はログイン不要
+ * - `/generate` のみ ProtectedLayout（AuthGuard）配下
+ *
  * コード分割戦略:
  * - ダッシュボード（/）: 静的import（初期表示に必須）
  * - ログイン・生成・スライド詳細: lazy import（別チャンクに分割）
@@ -25,27 +29,27 @@ export const router = createBrowserRouter([
     },
   },
   {
+    path: '/',
+    element: <DashboardRoute />,
+    loader: createDashboardLoader(queryClient),
+  },
+  {
+    path: '/slides/:slideId',
+    lazy: async () => {
+      const { SlidesRoute } = await import('./routes/app/slides');
+      return { Component: SlidesRoute };
+    },
+    loader: createSlideDetailLoader(queryClient),
+  },
+  {
     element: <ProtectedLayout />,
     children: [
-      {
-        path: '/',
-        element: <DashboardRoute />,
-        loader: createDashboardLoader(queryClient),
-      },
       {
         path: '/generate/:threadId?',
         lazy: async () => {
           const { GenerateRoute } = await import('./routes/app/generate');
           return { Component: GenerateRoute };
         },
-      },
-      {
-        path: '/slides/:slideId',
-        lazy: async () => {
-          const { SlidesRoute } = await import('./routes/app/slides');
-          return { Component: SlidesRoute };
-        },
-        loader: createSlideDetailLoader(queryClient),
       },
     ],
   },

@@ -3,12 +3,14 @@
  * スライド詳細ページ
  */
 
-import { useNavigate, useParams } from 'react-router-dom';
+import { Navigate, useNavigate, useParams } from 'react-router-dom';
+import { isAxiosError } from 'axios';
 import { useState, useCallback } from 'react';
 import { SlideContentViewer } from './components/SlideContentViewer';
 import { useSlideDetail } from './api/get-slide-detail';
 import FeedbackModal from './components/FeedbackModal';
 import { submitFeedback } from './api/submit-feedback';
+import { useAuth } from '../auth';
 
 const styles: Record<string, React.CSSProperties> = {
   container: {
@@ -66,9 +68,13 @@ export default function SlideDetailPage() {
   const { slideId } = useParams<{ slideId: string }>();
   const navigate = useNavigate();
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const { user, loading: isAuthLoading } = useAuth();
 
-  // React Queryでスライド詳細を取得
-  const { data: slide, isLoading, error } = useSlideDetail(slideId || '');
+  // React Queryでスライド詳細を取得（認証状態が確定してから。
+  // 確定前に匿名で叩くと、自分のスライドでも一時的に401になるため）
+  const { data: slide, isLoading, error } = useSlideDetail(slideId || '', {
+    enabled: !isAuthLoading,
+  });
 
   const handleFeedbackSubmit = useCallback(
     async (rating: number, comment: string) => {
@@ -99,8 +105,14 @@ export default function SlideDetailPage() {
     [slideId]
   );
 
-  if (isLoading) {
+  if (isAuthLoading || isLoading) {
     return <div style={{ ...styles.container, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Loading...</div>;
+  }
+
+  // 未ログインで非公開スライド（サンプル動画以外）を開いた場合はログインへ誘導
+  const isUnauthorized = isAxiosError(error) && error.response?.status === 401;
+  if (!user && isUnauthorized) {
+    return <Navigate to="/login" replace />;
   }
 
   if (error || !slide) {
@@ -130,8 +142,8 @@ export default function SlideDetailPage() {
         <div style={styles.slidePane}>
           <SlideContentViewer
             slideId={slide.id}
-            onQuickFeedback={handleQuickFeedback}
-            onOpenFeedbackModal={() => setShowFeedbackModal(true)}
+            onQuickFeedback={user ? handleQuickFeedback : undefined}
+            onOpenFeedbackModal={user ? () => setShowFeedbackModal(true) : undefined}
           />
         </div>
       </div>

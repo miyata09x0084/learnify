@@ -95,7 +95,11 @@ jobs:
           echo "🔍 Health check: ${SERVICE_URL}/api/health"
           curl -f "${SERVICE_URL}/api/health" || exit 1
 
+          # LangGraph 側の生死はデプロイ成否に含めない（生成一時停止中は落ちるのが想定内。ADR-0001）
           echo "🔍 Agent check: ${SERVICE_URL}/api/agent/ok"
-          curl -f "${SERVICE_URL}/api/agent/ok" || exit 1
-
-          echo "✅ All health checks passed!"
+          if curl -f "${SERVICE_URL}/api/agent/ok"; then
+            echo "✅ All health checks passed!"
+          else
+            echo "::warning::LangGraph agent check failed（生成一時停止中は想定内）"
+            echo "✅ API health check passed (agent check skipped as warning)"
+          fi
