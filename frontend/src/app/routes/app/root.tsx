@@ -1,6 +1,6 @@
 /**
  * Protected Routes Layout
- * Root layout for all authenticated routes
+ * Layout for routes that require login (currently only /generate)
  */
 
 import { AuthGuard } from '@/features/auth';

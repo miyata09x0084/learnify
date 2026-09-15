@@ -1,6 +1,6 @@
 /**
  * Dashboard Route
- * Root route for authenticated users
+ * Public top page (samples + how it works); user videos appear when logged in
  */
 
 import { DashboardPage } from '@/features/dashboard';

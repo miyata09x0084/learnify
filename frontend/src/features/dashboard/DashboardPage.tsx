@@ -1,5 +1,6 @@
 /**
- * DashboardPage - 統一カード形式のダッシュボード
+ * DashboardPage - 公開トップ兼ダッシュボード
+ * ログイン不要でサンプル動画と仕組みを閲覧でき、ログイン中は「あなたの動画」が追加表示される
  * 全ての要素を同じサイズのカードとして表示
  * React Query使用でデータ取得
  * React.memo + useCallback で再レンダリング最適化
@@ -14,7 +15,12 @@ import { useSamples } from "./api/get-samples";
 import { uploadPdf } from "./api/upload-pdf";
 import UnifiedCard from "./components/UnifiedCard";
 import QuickActionMenu from "./components/QuickActionMenu";
+import DashboardHeader from "./components/DashboardHeader";
+import HowItWorksSection from "./components/HowItWorksSection";
+import { getCreateCardProps } from "./components/createCardProps";
 import { env } from "@/config/env";
+
+const createCard = getCreateCardProps(env.GENERATION_ENABLED);
 
 const styles: Record<string, React.CSSProperties> = {
   container: {
@@ -22,57 +28,6 @@ const styles: Record<string, React.CSSProperties> = {
     background: "#f9fafb",
     fontFamily:
       '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-  },
-  header: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: "16px 32px",
-    background: "white",
-    borderBottom: "1px solid #e5e7eb",
-    boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
-  },
-  logoSection: {
-    display: "flex",
-    alignItems: "center",
-    gap: "12px",
-  },
-  logoIcon: {
-    fontSize: "28px",
-  },
-  logo: {
-    margin: 0,
-    fontSize: "22px",
-    fontWeight: "700",
-    color: "#1a1a1a",
-    letterSpacing: "-0.5px",
-  },
-  userSection: {
-    display: "flex",
-    alignItems: "center",
-    gap: "16px",
-  },
-  avatar: {
-    width: "36px",
-    height: "36px",
-    borderRadius: "50%",
-    border: "2px solid #e5e7eb",
-  },
-  userName: {
-    fontSize: "14px",
-    fontWeight: "600",
-    color: "#374151",
-  },
-  logoutButton: {
-    padding: "8px 16px",
-    fontSize: "13px",
-    background: "#f3f4f6",
-    color: "#374151",
-    border: "1px solid #d1d5db",
-    borderRadius: "6px",
-    cursor: "pointer",
-    fontWeight: "600",
-    transition: "all 0.2s",
   },
   gridContainer: {
     display: "grid",
@@ -195,40 +150,36 @@ const responsiveStyles = `
 
 export default function DashboardPage() {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, loading: isAuthLoading, logout } = useAuth();
   const { resetChat } = useReactAgent();
 
   // React Queryでスライド履歴を取得（JWTから自動的にuser_idを取得）
   const { data, isLoading: isSlidesLoading } = useSlides(
     { limit: 20 },
-    { enabled: !!user }
+    { enabled: !!user },
   );
   const slides = data?.slides || [];
 
-  // サンプルスライドを取得
-  const { data: samplesData, isLoading: isSamplesLoading } = useSamples({ enabled: !!user });
+  // サンプル動画を取得（ログイン不要）
+  const { data: samplesData, isLoading: isSamplesLoading } = useSamples();
   const samples = samplesData?.samples || [];
 
   const [showAll, setShowAll] = useState(false);
   const [showQuickMenu, setShowQuickMenu] = useState(false);
 
-  // ログアウト処理
+  // ログアウト処理（公開トップに留まり、ヘッダーが「ログイン」に切り替わる）
   const handleLogout = () => {
     logout();
-    navigate("/login", { replace: true });
   };
 
-  // クイックメニューを開く（生成停止中は案内のみ表示）
+  // クイックメニューを開く（未ログインならログインへ誘導）
   const handleNewSlide = useCallback(() => {
-    if (!env.GENERATION_ENABLED) {
-      alert(
-        "動画生成は現在一時停止しています。\nサンプルや過去に生成した動画は引き続きご覧いただけます。"
-      );
+    if (!user) {
+      navigate("/login");
       return;
     }
     setShowQuickMenu(true);
-  }, []);
-
+  }, [user, navigate]);
 
   // QuickActionMenuからのPDFアップロード選択時
   const handleSelectUpload = () => {
@@ -249,11 +200,11 @@ export default function DashboardPage() {
         }
 
         // 楽観的UI更新: 即座にローディング画面へ遷移
-        navigate('/generate', {
+        navigate("/generate", {
           state: {
-            pdfFile: file,  // ファイルオブジェクトを渡す
-            autoStart: true
-          }
+            pdfFile: file, // ファイルオブジェクトを渡す
+            autoStart: true,
+          },
         });
 
         // バックグラウンドでアップロード処理（非同期）
@@ -265,7 +216,7 @@ export default function DashboardPage() {
           console.error("❌ アップロードエラー:", err);
           // エラー時はダッシュボードに戻る
           alert("アップロードに失敗しました");
-          navigate('/', { replace: true });
+          navigate("/", { replace: true });
         }
       }
     };
@@ -273,18 +224,17 @@ export default function DashboardPage() {
   };
 
   // スライドクリック
-  const handleSlideClick = useCallback((slideId: string) => {
-    navigate(`/slides/${slideId}`);
-  }, [navigate]);
+  const handleSlideClick = useCallback(
+    (slideId: string) => {
+      navigate(`/slides/${slideId}`);
+    },
+    [navigate],
+  );
 
   // もっと読み込むクリック
   const handleShowAll = useCallback(() => {
     setShowAll(true);
   }, []);
-
-  if (!user) {
-    return null;
-  }
 
   // 表示するスライド数
   const displayedSlides = showAll ? slides : slides.slice(0, 5);
@@ -292,38 +242,22 @@ export default function DashboardPage() {
 
   return (
     <div style={styles.container}>
-      {/* ヘッダー */}
-      <div style={styles.header}>
-        <div style={styles.logoSection}>
-          <h1 style={styles.logo}>
-            Learnify
-          </h1>
-        </div>
-
-        <div style={styles.userSection}>
-          <img src={user.picture} alt={user.name} style={styles.avatar} />
-          <div style={styles.userName}>{user.name}</div>
-          <button
-            onClick={handleLogout}
-            onMouseOver={(e) => {
-              e.currentTarget.style.background = "#e5e7eb";
-              e.currentTarget.style.borderColor = "#9ca3af";
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.background = "#f3f4f6";
-              e.currentTarget.style.borderColor = "#d1d5db";
-            }}
-            style={styles.logoutButton}
-          >
-            ログアウト
-          </button>
-        </div>
-      </div>
+      <DashboardHeader
+        user={user}
+        loading={isAuthLoading}
+        onLogout={handleLogout}
+      />
 
       {/* サンプルセクション（ローディング中はスケルトン表示） */}
       {isSamplesLoading && (
         <div className="dashboard-grid" style={styles.gridContainer}>
-          <div style={{ ...styles.heroBanner, opacity: 0.5, animation: 'pulse 1.5s ease-in-out infinite' }} />
+          <div
+            style={{
+              ...styles.heroBanner,
+              opacity: 0.5,
+              animation: "pulse 1.5s ease-in-out infinite",
+            }}
+          />
         </div>
       )}
       {!isSamplesLoading && samples.length > 0 && (
@@ -351,83 +285,89 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* あなたの動画セクションタイトル */}
-      <div style={styles.sectionTitleContainer}>
-        <h2 style={styles.sectionTitle}>📂 あなたの動画</h2>
-      </div>
-
-      {/* ユーザー動画グリッド */}
+      {/* 新規作成（一時停止中は「一時停止」を表示し、クリック不可） */}
       <div className="dashboard-grid" style={styles.gridContainerNoTopPadding}>
-        {/* 新規作成（生成停止中は「停止中」を表示） */}
         <UnifiedCard
-          icon={env.GENERATION_ENABLED ? "📄" : "🚧"}
-          title={env.GENERATION_ENABLED ? "新規作成" : "停止中"}
-          subtitle={
-            env.GENERATION_ENABLED
-              ? "PDFから動画を生成"
-              : "動画生成は一時停止しています"
-          }
-          onClick={handleNewSlide}
+          icon={createCard.icon}
+          title={createCard.title}
+          subtitle={createCard.subtitle}
+          onClick={createCard.clickable ? handleNewSlide : undefined}
           variant="primary"
           className="card-default"
         />
-
-        {/* ローディング中はスケルトンカード表示 */}
-        {isSlidesLoading ? (
-          <>
-            {[1, 2, 3].map((i) => (
-              <div key={i} style={styles.skeletonCard} />
-            ))}
-          </>
-        ) : displayedSlides.length === 0 ? (
-          <div style={styles.emptyState}>
-            <div style={styles.emptyIcon}>🎬</div>
-            <div style={styles.emptyText}>まだ動画がありません</div>
-            <div style={styles.emptySubtext}>
-              新規作成から動画を作成してみましょう
-            </div>
-          </div>
-        ) : (
-          <>
-            {displayedSlides.map((slide) => {
-              // 日付フォーマットをメモ化するためにコンポーネント外で計算
-              const formattedDate = new Date(slide.created_at).toLocaleDateString(
-                "ja-JP",
-                {
-                  year: "numeric",
-                  month: "short",
-                  day: "numeric",
-                }
-              );
-
-              return (
-                <UnifiedCard
-                  key={slide.id}
-                  icon="🎬"
-                  title={slide.title}
-                  subtitle={formattedDate}
-                  onClickWithArg={handleSlideClick}
-                  clickArg={slide.id}
-                  variant="history"
-                  className="card-default"
-                />
-              );
-            })}
-
-            {/* もっと読み込むカード */}
-            {remainingCount > 0 && !showAll && (
-              <UnifiedCard
-                icon="⬇️"
-                title="もっと読み込む"
-                subtitle={`残り${remainingCount}件`}
-                onClick={handleShowAll}
-                variant="more"
-                className="card-default"
-              />
-            )}
-          </>
-        )}
       </div>
+
+      {/* 仕組み（ログイン不要） */}
+      <HowItWorksSection />
+
+      {/* あなたの動画（ログイン中のみ） */}
+      {user && (
+        <>
+          <div style={styles.sectionTitleContainer}>
+            <h2 style={styles.sectionTitle}>📂 あなたの動画</h2>
+          </div>
+
+          <div
+            className="dashboard-grid"
+            style={styles.gridContainerNoTopPadding}
+          >
+            {/* ローディング中はスケルトンカード表示 */}
+            {isSlidesLoading ? (
+              <>
+                {[1, 2, 3].map((i) => (
+                  <div key={i} style={styles.skeletonCard} />
+                ))}
+              </>
+            ) : displayedSlides.length === 0 ? (
+              <div style={styles.emptyState}>
+                <div style={styles.emptyIcon}>🎬</div>
+                <div style={styles.emptyText}>まだ動画がありません</div>
+                <div style={styles.emptySubtext}>
+                  新規作成から動画を作成してみましょう
+                </div>
+              </div>
+            ) : (
+              <>
+                {displayedSlides.map((slide) => {
+                  // 日付フォーマットをメモ化するためにコンポーネント外で計算
+                  const formattedDate = new Date(
+                    slide.created_at,
+                  ).toLocaleDateString("ja-JP", {
+                    year: "numeric",
+                    month: "short",
+                    day: "numeric",
+                  });
+
+                  return (
+                    <UnifiedCard
+                      key={slide.id}
+                      icon="🎬"
+                      title={slide.title}
+                      subtitle={formattedDate}
+                      onClickWithArg={handleSlideClick}
+                      clickArg={slide.id}
+                      variant="history"
+                      className="card-default"
+                    />
+                  );
+                })}
+
+                {/* もっと読み込むカード */}
+                {remainingCount > 0 && !showAll && (
+                  <UnifiedCard
+                    icon="⬇️"
+                    title="もっと読み込む"
+                    subtitle={`残り${remainingCount}件`}
+                    onClick={handleShowAll}
+                    variant="more"
+                    className="card-default"
+                  />
+                )}
+              </>
+            )}
+          </div>
+        </>
+      )}
 
       {/* クイックアクションメニュー */}
       {showQuickMenu && (

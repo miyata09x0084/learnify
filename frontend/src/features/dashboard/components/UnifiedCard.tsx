@@ -7,7 +7,7 @@
 import { memo } from 'react';
 
 interface UnifiedCardProps {
-  icon: string;
+  icon?: string;
   title: string;
   subtitle?: string;
   onClick?: () => void;
@@ -173,7 +173,9 @@ const UnifiedCard = memo(function UnifiedCard({
   const isMore = variant === 'more';
   const isSample = variant === 'sample';
 
-  const cardStyle = isPrimary
+  // クリックハンドラが無いカード（例: 生成一時停止中）は静的表示にする
+  const isClickable = Boolean(onClick || (onClickWithArg && clickArg));
+  const baseCardStyle = isPrimary
     ? styles.cardPrimary
     : isHistory
     ? styles.cardHistory
@@ -182,6 +184,7 @@ const UnifiedCard = memo(function UnifiedCard({
     : isSample
     ? styles.cardSample
     : styles.card;
+  const cardStyle = isClickable ? baseCardStyle : { ...baseCardStyle, cursor: 'default' };
   const iconStyle = isPrimary ? styles.iconPrimary : isSample ? styles.iconSample : styles.icon;
   const titleStyle = isPrimary ? styles.titlePrimary : isSample ? styles.titleSample : styles.title;
   const subtitleStyle = isPrimary ? styles.subtitlePrimary : isSample ? styles.subtitleSample : styles.subtitle;
@@ -236,12 +239,13 @@ const UnifiedCard = memo(function UnifiedCard({
   return (
     <div
       className={className}
+      data-testid="unified-card"
       style={cardStyle}
-      onClick={handleClick}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
+      onClick={isClickable ? handleClick : undefined}
+      onMouseEnter={isClickable ? handleMouseEnter : undefined}
+      onMouseLeave={isClickable ? handleMouseLeave : undefined}
     >
-      <div style={iconStyle}>{icon}</div>
+      {icon && <div style={iconStyle} data-testid="card-icon">{icon}</div>}
       <div style={styles.content}>
         <div style={titleStyle}>{title}</div>
         {subtitle && <div style={subtitleStyle}>{subtitle}</div>}

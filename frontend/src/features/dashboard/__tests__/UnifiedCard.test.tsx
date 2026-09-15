@@ -16,7 +16,7 @@ describe('UnifiedCard', () => {
       );
 
       expect(screen.getByText('テストカード')).toBeInTheDocument();
-      expect(screen.getByText('📝')).toBeInTheDocument();
+      expect(screen.getByTestId('card-icon')).toHaveTextContent('📝');
     });
 
     it('subtitle が指定された場合に表示される', () => {
@@ -32,6 +32,22 @@ describe('UnifiedCard', () => {
 
       expect(screen.getByText('テストカード')).toBeInTheDocument();
       expect(screen.getByText('サブタイトル')).toBeInTheDocument();
+    });
+
+    it('クリックハンドラが無い場合はカーソルを pointer にせず、ホバー装飾もしない', () => {
+      render(<UnifiedCard title="一時停止" variant="primary" />);
+      const card = screen.getByTestId('unified-card');
+
+      expect(card).toHaveStyle({ cursor: 'default' });
+      fireEvent.mouseEnter(card);
+      expect(card.style.boxShadow).not.toBe('0 8px 16px rgba(0,0,0,0.15)');
+    });
+
+    it('icon が未指定の場合はアイコン領域を描画しない', () => {
+      render(<UnifiedCard title="一時停止" />);
+
+      expect(screen.getByText('一時停止')).toBeInTheDocument();
+      expect(screen.queryByTestId('card-icon')).toBeNull();
     });
 
     it('subtitle が未指定の場合は表示されない', () => {
