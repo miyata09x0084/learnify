@@ -14,7 +14,7 @@ from typing import Dict, Any
 
 from app.core.supabase import get_supabase_client, get_slides_by_user, get_slide_by_id
 from app.core.cache import cache
-from app.auth.middleware import verify_token
+from app.auth.middleware import verify_token, optional_verify_token
 
 # キャッシュTTL（秒）
 SAMPLES_TTL = 600     # 10分: 全ユーザー共通、更新稀
@@ -104,13 +104,13 @@ async def list_slides(
 @router.get("/slides/{slide_id}/markdown")
 async def get_slide_markdown(
     slide_id: str,
-    authenticated_user_id: str = Depends(verify_token)
+    authenticated_user_id: str = Depends(optional_verify_token)
 ) -> Dict[str, Any]:
-    """スライドのMarkdownを取得（認証必須、RLSで保護）
+    """スライドのMarkdownを取得
 
-    認証: 必須（JWT）
-    RLS: Supabaseが自動的にuser_idでフィルタ
-    例外: サンプルスライド（user_id = 00000000-...）は全員アクセス可能
+    認証: 任意（JWT）。サンプル動画は未ログインでも閲覧可能（公開トップから遷移するため）
+    それ以外のスライドは所有者のみ閲覧可能
+    未認証時は authenticated_user_id == "anonymous"
 
     Args:
         slide_id: スライドID（UUID）
@@ -139,9 +139,13 @@ async def get_slide_markdown(
     # サンプルスライド（user_id = 00000000-...）は全員アクセス可能
     is_sample = slide.get("user_id") == SAMPLE_USER_ID
 
-    # RLS + 念のためユーザーID照合（サンプルスライドは除外）
-    if not is_sample and slide.get("user_id") != authenticated_user_id:
-        raise HTTPException(status_code=403, detail="アクセス権限がありません")
+    # サンプル動画は誰でも閲覧可。それ以外は未認証なら401（フロントが/loginへ誘導）、
+    # 認証済みだが所有者でなければ403
+    if not is_sample:
+        if authenticated_user_id == "anonymous":
+            raise HTTPException(status_code=401, detail="ログインが必要です")
+        if slide.get("user_id") != authenticated_user_id:
+            raise HTTPException(status_code=403, detail="アクセス権限がありません")
 
     return {
         "slide_id": slide["id"],

@@ -135,3 +135,28 @@ async def test_verify_token_missing_jwt_secret():
 
     assert exc_info.value.status_code == 503
     assert "SUPABASE_JWT_SECRET not configured" in exc_info.value.detail
+
+
+@pytest.mark.asyncio
+async def test_optional_verify_token_propagates_config_error(monkeypatch):
+    """optional_verify_token は設定ミス（503）を匿名扱いに握り潰さない"""
+    monkeypatch.delenv("SUPABASE_JWT_SECRET", raising=False)
+    from fastapi.security import HTTPAuthorizationCredentials
+
+    credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials="dummy-token")
+
+    with pytest.raises(HTTPException) as exc_info:
+        await optional_verify_token(credentials)
+
+    assert exc_info.value.status_code == 503
+
+
+@pytest.mark.asyncio
+async def test_optional_verify_token_returns_anonymous_on_invalid_token(monkeypatch):
+    """optional_verify_token は不正トークン（401）を匿名として扱う"""
+    monkeypatch.setenv("SUPABASE_JWT_SECRET", "test-secret")
+    from fastapi.security import HTTPAuthorizationCredentials
+
+    credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials="not-a-jwt")
+
+    assert await optional_verify_token(credentials) == "anonymous"
